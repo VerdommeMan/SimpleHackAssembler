@@ -17,8 +17,10 @@ object HackLexer {
     var lineCount = 0
     while (input.ready) {
 
-      stripComment(input.readLine().stripLeading()) match {
+      stripComment(input.readLine().trim()) match {
         case Tokens.labelRgx(text) => Tokens.Label(text)
+        case Tokens.AInstructionNrRgx(number) => Tokens.AInstruction(number, false)
+        case Tokens.AInstructionSymbolRgx(number) => Tokens.AInstruction(number, true)
         case _ => Tokens.Unknown(lineCount, _)
       }
       lineCount += 1

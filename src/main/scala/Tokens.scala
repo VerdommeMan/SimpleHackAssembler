@@ -3,8 +3,9 @@ import scala.util.matching.Regex
 
 object Tokens {
   // regex definitions for concrete classes below
-  val labelRgx: Regex = """^\((\w+)\)\s*$""".r
-
+  val labelRgx: Regex = """^\((\w+)\)$""".r
+  val AInstructionNrRgx: Regex = """^@(\d+)$""".r
+  val AInstructionSymbolRgx: Regex = """^@(\w+)$""".r
 
   sealed abstract class Hack
 
