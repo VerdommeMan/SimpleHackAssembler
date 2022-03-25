@@ -1,8 +1,12 @@
-
+import scala.util.matching.Regex
 
 
 object Tokens {
-  abstract class Hack
+  // regex definitions for concrete classes below
+  val labelRgx: Regex = """^\((\w+)\)\s*$""".r
+
+
+  sealed abstract class Hack
 
   /**
    * There is two types of A Instructions, one which is symbol and one that is value
