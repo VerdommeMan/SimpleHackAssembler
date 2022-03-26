@@ -6,6 +6,11 @@ object Tokens {
   val labelRgx: Regex = """^\((\w+)\)$""".r
   val AInstructionNrRgx: Regex = """^@(\d+)$""".r
   val AInstructionSymbolRgx: Regex = """^@(\w+)$""".r
+  val CInstructionFullRgx: Regex = """^(.+)=(.+);(\w+)$""".r
+  val CInstructionNoDestRgx: Regex = """^(.+);(\w+)$""".r
+  val CInstructionNoJumpRgx: Regex = """^(.+)=(.+)$""".r
+  val CInstructionOnlyCompRgx: Regex = """^(.){1,3}$""".r
+
 
   sealed abstract class Hack
 
@@ -15,25 +20,22 @@ object Tokens {
    * or later on added through the label instruction or variable
    * Is in the form of @value
    *
-   * @param value holds the value next the @token
+   * @param value  holds the value next the @token
    * @param symbol is it a symbol or an number
-   *
    * @example
    * - @1245
    * - @R2
    * - @_temp
    * - @i
    */
-  case class AInstruction(value:String, symbol: Boolean) extends Hack
+  case class AInstruction(value: String, symbol: Boolean) extends Hack
 
   /**
    * The C instruction consisting of dest = comp; jump where dest and jump are optional
    *
-   *
    * @param dest includes: null, A, D, M, MD, AM, AD, AMD
    * @param comp includes: 0, 1, -1, D, A, !D, !A, -D, -A, D+1, A+1, D-1, A-1, D+A, D-A, A-D, D&A, D|A, M, !M, -M, M+1, M-1, D+M, D-M, M-D, D&M, D|M
    * @param jump includes: null, JGT, JEQ, JLT, JGE, JNE, JLE, JMP
-   *
    * @example
    * M = D-1
    * D-1; JEQ
@@ -42,11 +44,22 @@ object Tokens {
    */
   case class CInstruction(dest: String, comp: String, jump: String) extends Hack
 
+  object CInstruction {
+    def unapply(line: String): Option[CInstruction] = {
+      line.replaceAll("\\s", "") match {
+        case CInstructionFullRgx(dest, comp, jump) => Some(CInstruction(dest, comp, jump))
+        case CInstructionNoDestRgx(comp, jump) => Some(CInstruction("", comp, jump))
+        case CInstructionNoJumpRgx(dest, comp) => Some(CInstruction(dest, comp, ""))
+        case CInstructionOnlyCompRgx(comp) => Some(CInstruction("", comp, ""))
+        case _ => None
+      }
+    }
+  }
+
   /**
    * Holds the label definition
    *
    * @param label the label definition
-   *
    * @example
    * (LOOP_START)
    * (END)
@@ -57,8 +70,9 @@ object Tokens {
   /**
    * When a instruction doesnt meet one of the above criteria,
    * the lexer generates this token for error handling
+   *
    * @param lineNr the line where this was found
-   * @param line the line which caused it
+   * @param line   the line which caused it
    */
   case class Unknown(lineNr: Int, line: String) extends Hack
 
