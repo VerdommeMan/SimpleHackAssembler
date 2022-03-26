@@ -15,7 +15,6 @@ object HackLexer {
   }
 
   def tokenize(input: BufferedReader): List[Tokens.Hack] = {
-
     input.lines()
       .toScala(LazyList)
       .map(stripComment)
@@ -24,13 +23,12 @@ object HackLexer {
       .filterNot(_._1.isBlank) // remove empty lines
       .map {
         case (line, lineCount) => line match {
-          case Tokens.labelRgx(text) => Tokens.Label(text)
-          case Tokens.AInstructionNrRgx(number) => Tokens.AInstruction(number, false)
-          case Tokens.AInstructionSymbolRgx(number) => Tokens.AInstruction(number, true)
+          case Tokens.Label(instr) => instr
+          case Tokens.AInstruction(instr) => instr
           case Tokens.CInstruction(instr) => instr
           case _ => Tokens.Unknown(lineCount + 1, line)
         }
-      }.toList :+ Tokens.EOI()
+      }.toVector.appended(Tokens.EOI()).toList
   }
 
   def tokenize(input: BufferedSource): Iterator[Tokens.Hack] = {

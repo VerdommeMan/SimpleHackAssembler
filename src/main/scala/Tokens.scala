@@ -30,6 +30,16 @@ object Tokens {
    */
   case class AInstruction(value: String, symbol: Boolean) extends Hack
 
+  object AInstruction {
+    def unapply(line: String): Option[AInstruction] = {
+      line match {
+        case AInstructionNrRgx(number) => Some(AInstruction(number, false))
+        case AInstructionSymbolRgx(number) => Some(AInstruction(number, true))
+        case _ => None
+      }
+    }
+  }
+
   /**
    * The C instruction consisting of dest = comp; jump where dest and jump are optional
    *
@@ -66,6 +76,15 @@ object Tokens {
    * (loop)
    */
   case class Label(label: String) extends Hack
+
+  object Label {
+    def unapply(line: String): Option[Label] = {
+      line match {
+        case Tokens.labelRgx(text) => Some(Tokens.Label(text))
+        case _ => None
+      }
+    }
+  }
 
   /**
    * When a instruction doesnt meet one of the above criteria,
