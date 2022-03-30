@@ -1,3 +1,5 @@
+import Tokens.CInstruction.{computations, destinations, jumps}
+
 import scala.util.matching.Regex
 
 
@@ -11,6 +13,17 @@ object Tokens {
   val CInstructionNoJumpRgx: Regex = """^(.+)=(.+)$""".r
   val CInstructionOnlyCompRgx: Regex = """^(.){1,3}$""".r
 
+  /**
+   * Returns all possible combinations for a given list of characters
+   *
+   * @param in list of chars
+   * @return a sequence of unique combinations
+   */
+  private def combine(in: List[Char]): Seq[String] =
+    for {
+      len <- 1 to in.length
+      combinations <- in combinations len
+    } yield combinations.mkString
 
   sealed abstract class Hack
 
@@ -31,8 +44,8 @@ object Tokens {
   case class AInstruction(value: String, symbol: Boolean) extends Hack
 
   object AInstruction {
-    def unapply(line: String): Option[AInstruction] = {
-      line match {
+    def unapply(iL: InstructionLine): Option[AInstruction] = {
+      iL.line match {
         case AInstructionNrRgx(number) => Some(AInstruction(number, false))
         case AInstructionSymbolRgx(number) => Some(AInstruction(number, true))
         case _ => None
@@ -43,27 +56,47 @@ object Tokens {
   /**
    * The C instruction consisting of dest = comp; jump where dest and jump are optional
    *
-   * @param dest includes: null, A, D, M, MD, AM, AD, AMD
+   * @param dest includes: NULL, A, D, M, MD, AM, AD, AMD
    * @param comp includes: 0, 1, -1, D, A, !D, !A, -D, -A, D+1, A+1, D-1, A-1, D+A, D-A, A-D, D&A, D|A, M, !M, -M, M+1, M-1, D+M, D-M, M-D, D&M, D|M
-   * @param jump includes: null, JGT, JEQ, JLT, JGE, JNE, JLE, JMP
+   * @param jump includes: NULL, JGT, JEQ, JLT, JGE, JNE, JLE, JMP
    * @example
    * M = D-1
    * D-1; JEQ
    * 0;JMP
    * M=D+M
    */
-  case class CInstruction(dest: String, comp: String, jump: String) extends Hack
+  case class CInstruction(lineNr: Int, dest: String, comp: String, jump: String) extends Hack {
+    val isDestValid: Boolean = destinations.contains(dest.toUpperCase)
+    val isCompValid: Boolean = computations.contains(comp.toUpperCase)
+    val isJumpValid: Boolean = jumps.contains(jump.toUpperCase)
+    val isValid: Boolean = isCompValid && isDestValid && isJumpValid
 
+    // Don't like this but dont see a better way
+    val errorMsg: String = {
+      (if (isValid) "" else s"This is an invalid C instruction on line: $lineNr\n")
+        .concat(if (isDestValid) "" else s"This destination is not valid: $dest")
+        .concat(if (isCompValid) "" else s"This computation is not valid: $comp")
+        .concat(if (isJumpValid) "" else s"This jump is not valid: $jump")
+    }
+
+  }
+
+  // Could make it that it only matches valid C instructions but decided not to
+  // This way i can improve the error handling
   object CInstruction {
-    def unapply(line: String): Option[CInstruction] = {
-      line.replaceAll("\\s", "") match {
-        case CInstructionFullRgx(dest, comp, jump) => Some(CInstruction(dest, comp, jump))
-        case CInstructionNoDestRgx(comp, jump) => Some(CInstruction("", comp, jump))
-        case CInstructionNoJumpRgx(dest, comp) => Some(CInstruction(dest, comp, ""))
-        case CInstructionOnlyCompRgx(comp) => Some(CInstruction("", comp, ""))
+    def unapply(iL: InstructionLine): Option[CInstruction] = {
+      iL.line.replaceAll("\\s", "") match {
+        case CInstructionFullRgx(dest, comp, jump) => Some(CInstruction(iL.lineNr, dest, comp, jump))
+        case CInstructionNoDestRgx(comp, jump) => Some(CInstruction(iL.lineNr, "", comp, jump))
+        case CInstructionNoJumpRgx(dest, comp) => Some(CInstruction(iL.lineNr, dest, comp, ""))
+        case CInstructionOnlyCompRgx(comp) => Some(CInstruction(iL.lineNr, "", comp, ""))
         case _ => None
       }
     }
+
+    val destinations: Vector[String] = Vector("NULL", "") ++ combine(List('A', 'D', 'M')).toVector
+    val jumps: Vector[String] = Vector("NULL", "", "JGT", "JEQ", "JLT", "JGE", "JNE", "JLE", "JMP")
+    val computations: Vector[String] = Vector("0", "1", "-1", "D", "A", "!D", "!A", "-D", "-A", "D+1", "A+1", "D-1", "A-1", "D+A", "D-A", "A-D", "D&A", "D|A", "M", "!M", "-M", "M+1", "M-1", "D+M", "D-M", "M-D", "D&M", "D|M")
   }
 
   /**
@@ -75,12 +108,12 @@ object Tokens {
    * (END)
    * (loop)
    */
-  case class Label(label: String) extends Hack
+  case class Label(lineNr: Int, label: String) extends Hack
 
   object Label {
-    def unapply(line: String): Option[Label] = {
-      line match {
-        case Tokens.labelRgx(text) => Some(Tokens.Label(text))
+    def unapply(iL: InstructionLine): Option[Label] = {
+      iL.line match {
+        case Tokens.labelRgx(text) => Some(Tokens.Label(iL.lineNr, text))
         case _ => None
       }
     }
@@ -99,4 +132,7 @@ object Tokens {
    * End Of Input, when the lexer hits the end of the input it generates this token
    */
   case class EOI() extends Hack
+
+  case class InstructionLine(lineNr: Int, line: String)
+
 }
