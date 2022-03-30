@@ -1,3 +1,5 @@
+import Tokens.InstructionLine
+
 import scala.io.BufferedSource
 import scala.util.matching.Regex
 
@@ -15,15 +17,14 @@ object HackLexer {
     input.getLines()
       .map(stripComment)
       .map(_.strip)
-      .zipWithIndex // line counter
+      .zip(LazyList.from(1))  // line counter (starts from 1)
       .filterNot(_._1.isBlank) // remove empty lines
       .map {
-        case (line, lineCount) => line match {
+        case (line, lineCount) => InstructionLine(lineCount, line) match {
           case Tokens.Label(instr) => instr
           case Tokens.AInstruction(instr) => instr
           case Tokens.CInstruction(instr) => instr
-          case _ => Tokens.Unknown(lineCount + 1, line)
-
+          case _ => Tokens.Unknown(lineCount, line)
         }
       } ++ Iterator(Tokens.EOI())
   }
