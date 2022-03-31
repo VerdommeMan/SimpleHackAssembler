@@ -45,10 +45,3 @@ M = 0		    // Memory[ @sum ] = Memory[ 17 ] = 0  // represents sum
 
 	@end
 	0 ; JMP 	// loop indefinitely
-@
-(*
-
-sf:L
-tsetst
-
-@ end

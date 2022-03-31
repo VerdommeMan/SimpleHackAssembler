@@ -1,8 +1,13 @@
+import jdk.jshell.spi.ExecutionControl.NotImplementedException
+
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
+
 object HackParser {
-  val SymbolTable = Map(
+  val symbolTable = Map(
     "SP" -> 0,
     "LCL" -> 1,
-    "ARG" ->  2,
+    "ARG" -> 2,
     "THIS" -> 3,
     "THAT" -> 4,
     "R0" -> 0,
@@ -27,13 +32,48 @@ object HackParser {
 
   /**
    * Uses two passes, first pass adds label definitions and checks for errors
+   *
    * @param tokens
    * @param outFile
    */
   def parseTokens(tokens: Iterator[Tokens.Hack], outFile: String): Unit = {
     var instructionCounter = 0
-    var labelDefinitions = Map[String, Int]()
+    val labelDefinitions = mutable.Map[String, Int]()
+    val errors = mutable.ListBuffer[String]()
+
+    // pass 1, find errors and label definitions
+    tokens.foreach {
+      case t: Tokens.Unknown => errors.addOne(t.errorMsg)
+      case c: Tokens.CInstruction if !c.isValid => errors.addOne(c.errorMsg)
+      case _: Tokens.AInstruction | _: Tokens.CInstruction  => instructionCounter += 1
+      case l: Tokens.Label => addLabelDefinition(l, instructionCounter, labelDefinitions, errors)
+      case _ => throw new UnsupportedOperationException
+    }
+
+    // Abort procedure when errors are found
+    if (handleErrors(errors.toList)) return
+
+    // second phase: translate tokens
+
+    tokens.foreach {
+      case c: Tokens.CInstruction =>
+      case a: Tokens.AInstruction =>
+    }
 
 
   }
+
+  def addLabelDefinition(label: Tokens.Label, instrCounter: Int, labelDefinitions: mutable.Map[String, Int], errors: ListBuffer[String]): Unit = {
+    if (labelDefinitions.contains(label.identifier)) errors.addOne(label.duplicateDefinitionErrorMsg)
+    else if (symbolTable.contains(label.identifier)) errors.addOne(label.existingSymbolErrorMsg)
+    else labelDefinitions(label.identifier) = instrCounter
+  }
+
+  def handleErrors(errors: List[String]): Boolean = {
+    if (errors.isEmpty) return false
+    System.err.println(s"Process aborted! Found ${errors.length} errors, fix these to proceed\n")
+    errors.foreach(System.err.print)
+    true
+  }
+
 }
