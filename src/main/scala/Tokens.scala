@@ -73,10 +73,10 @@ object Tokens {
 
     // Don't like this but dont see a better way
     val errorMsg: String = {
-      (if (isValid) "" else s"This is an invalid C instruction on line: $lineNr\n")
-        .concat(if (isDestValid) "" else s"This destination is not valid: $dest")
-        .concat(if (isCompValid) "" else s"This computation is not valid: $comp")
-        .concat(if (isJumpValid) "" else s"This jump is not valid: $jump")
+      (if (isValid) "" else s"Line $lineNr: This is an invalid C instruction\n")
+        .concat(if (isDestValid) "" else s"\tThis destination is not valid: $dest\n")
+        .concat(if (isCompValid) "" else s"\tThis computation is not valid: $comp\n")
+        .concat(if (isJumpValid) "" else s"\tThis jump is not valid: $jump\n")
     }
 
   }
@@ -102,13 +102,17 @@ object Tokens {
   /**
    * Holds the label definition
    *
-   * @param label the label definition
+   * @param identifier the label definition
    * @example
    * (LOOP_START)
    * (END)
    * (loop)
    */
-  case class Label(lineNr: Int, label: String) extends Hack
+  case class Label(lineNr: Int, identifier: String) extends Hack {
+    def duplicateDefinitionErrorMsg: String = s"Line $lineNr: Found duplicate label definition ($identifier)\n"
+
+    def existingSymbolErrorMsg: String = s"Line $lineNr: Label definition can not be an existing symbol, for label: $identifier\n"
+  }
 
   object Label {
     def unapply(iL: InstructionLine): Option[Label] = {
@@ -126,13 +130,14 @@ object Tokens {
    * @param lineNr the line where this was found
    * @param line   the line which caused it
    */
-  case class Unknown(lineNr: Int, line: String) extends Hack
+  case class Unknown(lineNr: Int, line: String) extends Hack {
+    val errorMsg: String = s"Line $lineNr: Found unknown instruction ($line)\n"
+  }
 
   /**
-   * End Of Input, when the lexer hits the end of the input it generates this token
+   * Holds meta information about the current line
+   * @param lineNr the line number where the line was read from the original input
+   * @param line the line that was read (stripped and removed comments)
    */
-  case class EOI() extends Hack
-
   case class InstructionLine(lineNr: Int, line: String)
-
 }

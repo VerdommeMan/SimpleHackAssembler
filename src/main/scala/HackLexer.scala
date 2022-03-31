@@ -26,6 +26,6 @@ object HackLexer {
           case Tokens.CInstruction(instr) => instr
           case _ => Tokens.Unknown(lineCount, line)
         }
-      } ++ Iterator(Tokens.EOI())
+      }
   }
 }

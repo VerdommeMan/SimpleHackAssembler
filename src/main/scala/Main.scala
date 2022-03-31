@@ -7,6 +7,6 @@ object Main extends App {
     exit(1)
   }
   val filename = args(0)
+  HackParser.parseTokens(HackLexer.tokenize(Source.fromFile(filename)), "")
 
-  HackLexer.tokenize(Source.fromFile(filename)).foreach(println)
 }
