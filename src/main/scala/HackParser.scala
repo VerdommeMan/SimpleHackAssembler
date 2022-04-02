@@ -1,5 +1,3 @@
-import jdk.jshell.spi.ExecutionControl.NotImplementedException
-
 import java.io.{File, PrintWriter}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -32,18 +30,19 @@ object HackParser {
     "KBD" -> 24576
   )
 
-  val VARIABLE_OFFSET = 16 // the first 16 address locations are reserved for keywords
+  val REGISTER_OFFSET = 16 // the first 16 address locations are reserved for register
 
   /**
    * Uses two passes, first pass adds label definitions and checks for errors
+   * Second pass translates the instructions and writes to the file
    *
-   * @param tokens
-   * @param outFile
+   * @param tokens  the stream of tokens
+   * @param outFile the file were we are writing to
    */
   def parseTokens(tokens: Iterator[Tokens.Hack], outFile: File): Unit = {
     var instructionCounter = 0
     var variableCounter = 0 // tracks how many variables are instantiated
-    val labelVariableMap = mutable.Map[String, Int]() // this keeps track of the defined labels and variables
+    val fullSymbolTable = mutable.Map[String, Int]() ++= symbolTable // this keeps track of the defined labels and variables, preloaded with keywords
     val errors = mutable.ListBuffer[String]()
     val (pass1, pass2) = tokens.duplicate
 
@@ -52,7 +51,7 @@ object HackParser {
       case t: Tokens.Unknown => errors.addOne(t.errorMsg)
       case c: Tokens.CInstruction if !c.isValid => errors.addOne(c.errorMsg)
       case _: Tokens.AInstruction | _: Tokens.CInstruction => instructionCounter += 1
-      case l: Tokens.Label => addLabelDefinition(l, instructionCounter, labelVariableMap, errors)
+      case l: Tokens.Label => addLabelDefinition(l, instructionCounter, fullSymbolTable, errors)
       case _ => throw new UnsupportedOperationException
     }
 
@@ -65,9 +64,9 @@ object HackParser {
       case c: Tokens.CInstruction => fileWriter.println(c.toBinary)
       case instr: Tokens.AInstruction =>
         val value: Int = if (instr.isSymbol) {
-          labelVariableMap.getOrElseUpdate(instr.value, { // if not found means it is instantiated a new variable
+          fullSymbolTable.getOrElseUpdate(instr.value, {
             variableCounter += 1
-            variableCounter + VARIABLE_OFFSET - 1
+            variableCounter - 1 + REGISTER_OFFSET
           })
         } else instr.value.toInt
 
