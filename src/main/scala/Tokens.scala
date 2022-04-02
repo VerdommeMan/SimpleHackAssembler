@@ -6,24 +6,25 @@ import scala.util.matching.Regex
 
 object Tokens {
   // regex definitions for concrete classes below
-  val labelRgx: Regex = """^\((\w+)\)$""".r
+  val labelRgx: Regex = """^\(([\w$.]+)\)$""".r // a label is considered when it starts with ( and the following chars, digits, letters, underscore, dot and $ ends with )
   val AInstructionNrRgx: Regex = """^@(\d+)$""".r
-  val AInstructionSymbolRgx: Regex = """^@(\w+)$""".r
+  val AInstructionSymbolRgx: Regex = """^@([\w$.]+)$""".r
   val CInstructionFullRgx: Regex = """^(.+)=(.+);(\w+)$""".r
   val CInstructionNoDestRgx: Regex = """^(.+);(\w+)$""".r
   val CInstructionNoJumpRgx: Regex = """^(.+)=(.+)$""".r
   val CInstructionOnlyCompRgx: Regex = """^(.){1,3}$""".r
 
   /**
-   * Returns all possible combinations for a given list of characters
+   * Returns all possible permutations for a given list of characters
    *
    * @param in list of chars
    * @return a sequence of unique combinations
    */
-  private def combine(in: List[Char]): Seq[String] =
+  private def perm(in: List[Char]): IndexedSeq[String] =
     for {
       len <- 1 to in.length
       combinations <- in combinations len
+      combinations <- combinations.permutations
     } yield combinations.mkString
 
   sealed abstract class Hack
@@ -117,7 +118,7 @@ object Tokens {
       }
     }
 
-    val destinations: Vector[String] = Vector("NULL", "") ++ combine(List('A', 'D', 'M')).toVector
+    val destinations: Vector[String] = Vector("NULL", "") ++ perm(List('A', 'D', 'M'))
     val jumps: Map[String, String] = Map( // 3 bits
       ("NULL", "000"),
       ("", "000"),
