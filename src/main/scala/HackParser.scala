@@ -1,9 +1,11 @@
 import jdk.jshell.spi.ExecutionControl.NotImplementedException
 
+import java.io.{File, PrintWriter}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 object HackParser {
+  // Holds keywords
   val symbolTable = Map(
     "SP" -> 0,
     "LCL" -> 1,
@@ -30,37 +32,50 @@ object HackParser {
     "KBD" -> 24576
   )
 
+  val VARIABLE_OFFSET = 16 // the first 16 address locations are reserved for keywords
+
   /**
    * Uses two passes, first pass adds label definitions and checks for errors
    *
    * @param tokens
    * @param outFile
    */
-  def parseTokens(tokens: Iterator[Tokens.Hack], outFile: String): Unit = {
+  def parseTokens(tokens: Iterator[Tokens.Hack], outFile: File): Unit = {
     var instructionCounter = 0
-    val labelDefinitions = mutable.Map[String, Int]()
+    var variableCounter = 0 // tracks how many variables are instantiated
+    val labelVariableMap = mutable.Map[String, Int]() // this keeps track of the defined labels and variables
     val errors = mutable.ListBuffer[String]()
+    val (pass1, pass2) = tokens.duplicate
 
     // pass 1, find errors and label definitions
-    tokens.foreach {
+    pass1.foreach {
       case t: Tokens.Unknown => errors.addOne(t.errorMsg)
       case c: Tokens.CInstruction if !c.isValid => errors.addOne(c.errorMsg)
-      case _: Tokens.AInstruction | _: Tokens.CInstruction  => instructionCounter += 1
-      case l: Tokens.Label => addLabelDefinition(l, instructionCounter, labelDefinitions, errors)
+      case _: Tokens.AInstruction | _: Tokens.CInstruction => instructionCounter += 1
+      case l: Tokens.Label => addLabelDefinition(l, instructionCounter, labelVariableMap, errors)
       case _ => throw new UnsupportedOperationException
     }
 
     // Abort procedure when errors are found
     if (handleErrors(errors.toList)) return
+    val fileWriter: PrintWriter = new PrintWriter(outFile)
 
     // second phase: translate tokens
+    pass2.foreach {
+      case c: Tokens.CInstruction => fileWriter.println(c.toBinary)
+      case instr: Tokens.AInstruction =>
+        val value: Int = if (instr.isSymbol) {
+          labelVariableMap.getOrElseUpdate(instr.value, { // if not found means it is instantiated a new variable
+            variableCounter += 1
+            variableCounter + VARIABLE_OFFSET - 1
+          })
+        } else instr.value.toInt
 
-    tokens.foreach {
-      case c: Tokens.CInstruction =>
-      case a: Tokens.AInstruction =>
+        val binary = value.toBinaryString.takeRight(15).reverse.padTo(16, '0').reverse
+        fileWriter.println(binary)
+      case _ =>
     }
-
-
+    fileWriter.close()
   }
 
   def addLabelDefinition(label: Tokens.Label, instrCounter: Int, labelDefinitions: mutable.Map[String, Int], errors: ListBuffer[String]): Unit = {

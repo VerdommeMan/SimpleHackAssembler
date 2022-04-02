@@ -1,5 +1,6 @@
 import Tokens.CInstruction.{computations, destinations, jumps}
 
+import scala.language.implicitConversions
 import scala.util.matching.Regex
 
 
@@ -33,15 +34,15 @@ object Tokens {
    * or later on added through the label instruction or variable
    * Is in the form of @value
    *
-   * @param value  holds the value next the @token
-   * @param symbol is it a symbol or an number
+   * @param value    holds the value next the @token
+   * @param isSymbol is it a symbol or an number
    * @example
    * - @1245
    * - @R2
    * - @_temp
    * - @i
    */
-  case class AInstruction(value: String, symbol: Boolean) extends Hack
+  case class AInstruction(value: String, isSymbol: Boolean) extends Hack
 
   object AInstruction {
     def unapply(iL: InstructionLine): Option[AInstruction] = {
@@ -79,6 +80,28 @@ object Tokens {
         .concat(if (isJumpValid) "" else s"\tThis jump is not valid: $jump\n")
     }
 
+    /**
+     * C instruction 16 bit(see README specification)
+     * 1xxA cccc ccdd djjj
+     * 1 is the opcode, there is only two opcodes 0 and 1, for A instruction and C instruction
+     * x bits arent used, A bit decides if it should retrieve from reg A (0) or M[A] (1)
+     * c bits are the comp bits used by the alu, j bits represents the jump destination
+     * d bits are the destination, where it should store the result (A, D, M)
+     *
+     * @note
+     * Uses an implicit to convert booleans to string [[CInstruction.bool2str]]
+     * @return C instruction as 16 bit binary string
+     */
+
+    def toBinary: String =
+      "111" + computations(comp) +
+        bool2str(dest.contains('A')) +
+        bool2str(dest.contains('D')) +
+        bool2str(dest.contains('M')) +
+        jumps(jump)
+
+    private def bool2str(b: Boolean): String = if (b) "1" else "0" // converts booleans to string "1" and "0"
+
   }
 
   // Could make it that it only matches valid C instructions but decided not to
@@ -95,8 +118,46 @@ object Tokens {
     }
 
     val destinations: Vector[String] = Vector("NULL", "") ++ combine(List('A', 'D', 'M')).toVector
-    val jumps: Vector[String] = Vector("NULL", "", "JGT", "JEQ", "JLT", "JGE", "JNE", "JLE", "JMP")
-    val computations: Vector[String] = Vector("0", "1", "-1", "D", "A", "!D", "!A", "-D", "-A", "D+1", "A+1", "D-1", "A-1", "D+A", "D-A", "A-D", "D&A", "D|A", "M", "!M", "-M", "M+1", "M-1", "D+M", "D-M", "M-D", "D&M", "D|M")
+    val jumps: Map[String, String] = Map( // 3 bits
+      ("NULL", "000"),
+      ("", "000"),
+      ("JGT", "001"),
+      ("JEQ", "010"),
+      ("JGE", "011"),
+      ("JLT", "100"),
+      ("JNE", "101"),
+      ("JLE", "110"),
+      ("JMP", "111")
+    )
+    val computations: Map[String, String] = Map( // 7 bits
+      "0" -> "0101010",
+      "1" -> "0111111",
+      "-1" -> "0111010",
+      "D" -> "0001100",
+      "A" -> "0110000",
+      "!D" -> "0001101",
+      "!A" -> "0110001",
+      "-D" -> "0001111",
+      "-A" -> "0110011",
+      "D+1" -> "0011111",
+      "A+1" -> "0110111",
+      "D-1" -> "0001110",
+      "A-1" -> "0110010",
+      "D+A" -> "0000010",
+      "D-A" -> "0010011",
+      "A-D" -> "0000111",
+      "D&A" -> "0000000",
+      "D|A" -> "0010101",
+      "M" -> "1110000",
+      "!M" -> "1110001",
+      "-M" -> "1110011",
+      "M+1" -> "1110111",
+      "M-1" -> "1110010",
+      "D+M" -> "1000010",
+      "D-M" -> "1010011",
+      "M-D" -> "1000111",
+      "D&M" -> "1000000",
+      "D|M" -> "1010101")
   }
 
   /**
@@ -136,8 +197,9 @@ object Tokens {
 
   /**
    * Holds meta information about the current line
+   *
    * @param lineNr the line number where the line was read from the original input
-   * @param line the line that was read (stripped and removed comments)
+   * @param line   the line that was read (stripped and removed comments)
    */
   case class InstructionLine(lineNr: Int, line: String)
 }
