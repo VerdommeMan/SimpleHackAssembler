@@ -1,6 +1,74 @@
+import HackParser.{REGISTER_OFFSET, symbolTable}
+
 import java.io.{File, PrintWriter}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+
+class HackParser(tokens: Iterator[Tokens.Hack]){
+  var instructionCounter = 0
+  var variableCounter = 0 // tracks how many variables are instantiated
+  // this keeps track of the defined labels and variables, preloaded with keywords
+  val fullSymbolTable: mutable.Map[String, Int] = mutable.Map[String, Int]() ++= symbolTable
+  val errors: ListBuffer[String] = mutable.ListBuffer[String]()
+
+  /**
+   * Uses two passes, first pass adds label definitions and checks for errors
+   * Second pass translates the instructions and writes to the file
+   *
+   * @param outFile the file were we are writing to
+   */
+  def parseTokens(outFile: File): Unit = {
+    val (pass1, pass2) = tokens.duplicate
+
+    // pass 1, find errors and label definitions
+    pass1.foreach {
+      case t: Tokens.Unknown => errors.addOne(t.errorMsg)
+      case c: Tokens.CInstruction if !c.isValid => errors.addOne(c.errorMsg)
+      case _: Tokens.AInstruction | _: Tokens.CInstruction => instructionCounter += 1
+      case l: Tokens.Label => addLabelDefinition(l)
+      case _ => throw new UnsupportedOperationException
+    }
+
+    // Abort procedure when errors are found
+    if (handleErrors) return
+    val fileWriter: PrintWriter = new PrintWriter(outFile)
+
+    // second phase: translate tokens
+    pass2
+      .filterNot(_.isInstanceOf[Tokens.Label])
+      .map{
+        case c: Tokens.CInstruction => c.toBinary
+        case a: Tokens.AInstruction => toBinary(a)
+      }
+      .foreach(fileWriter.println)
+  }
+
+  def toBinary(instr: Tokens.AInstruction): String = {
+    val value: Int = if (instr.isSymbol) {
+      fullSymbolTable.getOrElseUpdate(instr.value, {
+        variableCounter += 1
+        variableCounter - 1 + REGISTER_OFFSET
+      })
+    } else instr.value.toInt
+    value.toBinaryString.takeRight(15).reverse.padTo(16, '0').reverse // lefts pads zeros until 16 length
+  }
+
+  def addLabelDefinition(label: Tokens.Label): Unit = {
+    if (symbolTable.contains(label.identifier))
+      errors.addOne(label.existingSymbolErrorMsg)
+    else if (fullSymbolTable.contains(label.identifier))
+      errors.addOne(label.duplicateDefinitionErrorMsg)
+    else
+      fullSymbolTable(label.identifier) = instructionCounter
+  }
+
+  def handleErrors: Boolean = {
+    if (errors.isEmpty) return false
+    System.err.println(s"Process aborted! Found ${errors.length} errors, fix these to proceed\n")
+    errors.foreach(System.err.print)
+    true
+  }
+}
 
 object HackParser {
   // Holds keywords
@@ -30,64 +98,6 @@ object HackParser {
     "KBD" -> 24576
   )
 
-  val REGISTER_OFFSET = 16 // the first 16 address locations are reserved for register
-
-  /**
-   * Uses two passes, first pass adds label definitions and checks for errors
-   * Second pass translates the instructions and writes to the file
-   *
-   * @param tokens  the stream of tokens
-   * @param outFile the file were we are writing to
-   */
-  def parseTokens(tokens: Iterator[Tokens.Hack], outFile: File): Unit = {
-    var instructionCounter = 0
-    var variableCounter = 0 // tracks how many variables are instantiated
-    val fullSymbolTable = mutable.Map[String, Int]() ++= symbolTable // this keeps track of the defined labels and variables, preloaded with keywords
-    val errors = mutable.ListBuffer[String]()
-    val (pass1, pass2) = tokens.duplicate
-
-    // pass 1, find errors and label definitions
-    pass1.foreach {
-      case t: Tokens.Unknown => errors.addOne(t.errorMsg)
-      case c: Tokens.CInstruction if !c.isValid => errors.addOne(c.errorMsg)
-      case _: Tokens.AInstruction | _: Tokens.CInstruction => instructionCounter += 1
-      case l: Tokens.Label => addLabelDefinition(l, instructionCounter, fullSymbolTable, errors)
-      case _ => throw new UnsupportedOperationException
-    }
-
-    // Abort procedure when errors are found
-    if (handleErrors(errors.toList)) return
-    val fileWriter: PrintWriter = new PrintWriter(outFile)
-
-    // second phase: translate tokens
-    pass2.foreach {
-      case c: Tokens.CInstruction => fileWriter.println(c.toBinary)
-      case instr: Tokens.AInstruction =>
-        val value: Int = if (instr.isSymbol) {
-          fullSymbolTable.getOrElseUpdate(instr.value, {
-            variableCounter += 1
-            variableCounter - 1 + REGISTER_OFFSET
-          })
-        } else instr.value.toInt
-
-        val binary = value.toBinaryString.takeRight(15).reverse.padTo(16, '0').reverse
-        fileWriter.println(binary)
-      case _ =>
-    }
-    fileWriter.close()
-  }
-
-  def addLabelDefinition(label: Tokens.Label, instrCounter: Int, labelDefinitions: mutable.Map[String, Int], errors: ListBuffer[String]): Unit = {
-    if (labelDefinitions.contains(label.identifier)) errors.addOne(label.duplicateDefinitionErrorMsg)
-    else if (symbolTable.contains(label.identifier)) errors.addOne(label.existingSymbolErrorMsg)
-    else labelDefinitions(label.identifier) = instrCounter
-  }
-
-  def handleErrors(errors: List[String]): Boolean = {
-    if (errors.isEmpty) return false
-    System.err.println(s"Process aborted! Found ${errors.length} errors, fix these to proceed\n")
-    errors.foreach(System.err.print)
-    true
-  }
-
+  // the first 16 address locations are reserved for register
+  val REGISTER_OFFSET = 16
 }
