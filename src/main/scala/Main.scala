@@ -8,6 +8,9 @@ object Main extends App {
     exit(1)
   }
   val filename = args(0)
-  HackParser.parseTokens(HackLexer.tokenize(Source.fromFile(filename)), new File("filename.hack"))
+
+  val parser = new HackParser(HackLexer.tokenize(Source.fromFile(filename)))
+
+  parser.parseTokens(new File("filename.hack"))
 
 }
