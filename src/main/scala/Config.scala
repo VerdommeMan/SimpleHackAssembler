@@ -9,7 +9,7 @@ case class Config(inputFile: File, outputFile: File, verbose: Boolean = false, f
    *
    * @param inputFile the file where it reads from
    */
-  def this(inputFile: File) = {
+  def this(inputFile: File, verbose: Boolean, force: Boolean) = {
     this(inputFile, {
       var filename = inputFile.getName
       val pos = filename.lastIndexOf(".")
@@ -17,22 +17,22 @@ case class Config(inputFile: File, outputFile: File, verbose: Boolean = false, f
         filename = filename.substring(0, pos)
 
       new File(filename + ".hack")
-    })
+    }, verbose, force)
   }
 
-  def checkValid = {
+  def checkValid(): Unit = {
     if (!(inputFile.exists() && inputFile.isFile && inputFile.canRead)) {
       System.err.println("Input file does not exist, or is not a file or can not be read")
       exit(1)
     }
 
-    if (!(outputFile)) {
-      System.err.println("Input file does not exist, or is not a file or can not be read")
+    if (!(!outputFile.exists() || force)) {
+      System.err.println("Output file already exists, use -force to overwrite said file")
       exit(1)
     }
   }
 }
 
 object Config {
-  def apply(inputFile: File) = new Config(inputFile)
+  def apply(inputFile: File, verbose: Boolean, force: Boolean) = new Config(inputFile, verbose, force)
 }
