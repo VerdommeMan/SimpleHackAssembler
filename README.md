@@ -1,11 +1,13 @@
 # SimpleHackAssembler
 
 SimpleHackAssembler is a 16-bit machine language assembler for the 16-bit Hack Assembly Language written in Scala. This was done as part of building a complete 16-bit computer from the grounds up through the book, and [MOOC](https://www.coursera.org/learn/build-a-computer/), *Elementes of Computing Systems*, which is informally known as [nand2tetris](http://www.nand2tetris.org). Hack is also the name of the computer.
+It also features a basic error handler.
 
 ## Contents
 
 - [Description](#description)
-- [Example Usage](#usage)
+- [Usage](#usage)
+- [Basic Error Handler](#basic-error-handling)
 - [Intro to Hack Assembly](#intro-to-hack-assembly)
     - [Predefined Symbols](#predefined-symbols)
     - [Types of Instructions](#types-of-instructions)
@@ -42,6 +44,33 @@ Options and flags:
         Whether to be verbose, prints input and output file and duration
     --force
         Overwrites output file if it already exists.
+```
+
+## Basic Error handling
+
+This assembler also offers a basic error handler
+for example running `hack-assembler example_in\invalid.asm`returns
+
+```
+Process aborted! Found 10 errors, fix these to proceed
+
+Line 3: This is an invalid C instruction
+	This computation is not valid: @
+Line 4: This is an invalid C instruction
+	This computation is not valid: *
+Line 6: Found unknown instruction (sf:L)
+Line 7: Found unknown instruction (tsetst)
+Line 9: Found unknown instruction (@ end)
+Line 12: Found duplicate label definition (tset)
+Line 13: Label definition can not be an existing symbol, for label: SCREEN
+Line 15: This is an invalid C instruction
+	This computation is not valid: ;
+Line 17: This is an invalid C instruction
+	This destination is not valid: NOLL
+	This computation is not valid: 5
+	This jump is not valid: NOLL
+Line 18: This is an invalid C instruction
+	This computation is not valid: 8
 ```
 
 ### Max.asm
