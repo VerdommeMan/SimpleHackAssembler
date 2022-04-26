@@ -30,6 +30,7 @@ Usage: `hack-assembler [--output <path/to/outputfile.hack>] [--verbose] [--force
 
 Example: `hack-assembler example_in/Add.asm -o example_out/add.hack --force`
 
+```
 Options and flags:
     --help
         Display this help text.
@@ -41,7 +42,7 @@ Options and flags:
         Whether to be verbose, prints input and output file and duration
     --force
         Overwrites output file if it already exists.
-
+```
 
 ### Max.asm
 

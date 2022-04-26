@@ -72,7 +72,7 @@ class HackParser(tokens: Iterator[Tokens.Hack]){
 
 object HackParser {
   // Holds keywords
-  val symbolTable = Map(
+  val symbolTable: Map[String, Int] = Map(
     "SP" -> 0,
     "LCL" -> 1,
     "ARG" -> 2,
