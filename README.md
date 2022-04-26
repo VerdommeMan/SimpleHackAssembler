@@ -17,6 +17,7 @@ It also features a basic error handler.
 - [References](#references)
     - [Computer Architecture](#computer-architecture)
     - [C-Instructions Reference](#c-instructions-reference)
+- [Credits](#credits)
 
 ## Description
 
