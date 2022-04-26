@@ -14,7 +14,7 @@ object Main extends CommandApp(
     val startTime = System.currentTimeMillis()
 
     val inputFileOpt = Opts.argument[Path](metavar = "path/to/assemblyfile")
-    val outputFileOpt = Opts.option[String]("output", short = "o", help = "Specify the output path, if not present it will be put in current directory")
+    val outputFileOpt = Opts.option[String]("output", short = "o", help = "Specify the output path, if not present it will be put in current directory", metavar = "path/to/outputfile.hack")
     val verboseOpt = Opts.flag("verbose", help = "Whether to be verbose, prints input and output file and duration").orFalse
     val forceOpt = Opts.flag("force", help = "Overwrites output file if it already exists.").orFalse
 
@@ -44,5 +44,4 @@ object Main extends CommandApp(
   },
   helpFlag = true,
   version = "0.1.0"
-
 )
