@@ -84,13 +84,11 @@ object Tokens {
     /**
      * C instruction 16 bit(see README specification)
      * 1xxA cccc ccdd djjj
-     * 1 is the opcode, there is only two opcodes 0 and 1, for A instruction and C instruction
+     * 1 is the opcode, there is only two opcodes 0 and 1, for A instruction and C instruction.
      * x bits arent used, A bit decides if it should retrieve from reg A (0) or M[A] (1)
      * c bits are the comp bits used by the alu, j bits represents the jump destination
      * d bits are the destination, where it should store the result (A, D, M)
      *
-     * @note
-     * Uses an implicit to convert booleans to string [[CInstruction.bool2str]]
      * @return C instruction as 16 bit binary string
      */
 
@@ -102,7 +100,6 @@ object Tokens {
         jumps(jump)
 
     private def bool2str(b: Boolean): String = if (b) "1" else "0" // converts booleans to string "1" and "0"
-
   }
 
   // Could make it that it only matches valid C instructions but decided not to
